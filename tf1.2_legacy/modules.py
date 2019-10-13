@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 #/usr/bin/python2
 '''
-June 2017 by kyubyong park. 
-kbpark.linguist@gmail.com.
-https://www.github.com/kyubyong/transformer
+该函数实现编码器和解码器网络
 '''
 
 from __future__ import print_function
@@ -18,8 +16,8 @@ def normalize(inputs,
     Args:
       inputs: A tensor with 2 or more dimensions, where the first dimension has
         `batch_size`.
-      epsilon: A floating number. A very small number for preventing ZeroDivision Error.
-      scope: Optional scope for `variable_scope`.
+      epsilon: A floating number. 一个很小的数值，以免出现除以0 的错误
+      scope: 定义了tensorflow中的`variable_scope`.将与参数reuse共同作为参数传递给tf.variable_scope
       reuse: Boolean, whether to reuse the weights of a previous layer
         by the same name.
       

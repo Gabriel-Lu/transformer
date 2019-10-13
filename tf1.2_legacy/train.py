@@ -12,15 +12,20 @@ from hyperparams import Hyperparams as hp
 from data_load import get_batch_data, load_de_vocab, load_en_vocab
 from modules import *
 import os, codecs
-from tqdm import tqdm
+from tqdm import tqdm   # 用于编写训练进度的进度条
 
 class Graph():
     def __init__(self, is_training=True):
+        print("\n\n\nIniting graph for train now\n\n\n")
         self.graph = tf.Graph()
         with self.graph.as_default():
             if is_training:
                 self.x, self.y, self.num_batch = get_batch_data() # (N, T)
+                # num_batch是int型的
+                print('\n\n\nNum of batch is '+str(self.num_batch)) # here is ERROR! number of batch is 0.
+                print("Now we are training\n")
             else: # inference
+                print("We are not training now, instead, we are inferr-ing\n")
                 self.x = tf.placeholder(tf.int32, shape=(None, hp.maxlen))
                 self.y = tf.placeholder(tf.int32, shape=(None, hp.maxlen))
 
@@ -81,6 +86,7 @@ class Graph():
             
             # Decoder
             with tf.variable_scope("decoder"):
+                print("\n\n\nDecoding now\n\n\n")
                 ## Embedding
                 self.dec = embedding(self.decoder_inputs, 
                                       vocab_size=len(en2idx), 
@@ -92,6 +98,7 @@ class Graph():
 
                 ## Positional Encoding
                 if hp.sinusoid:
+                    print("\n\n\nPositional encoding now,case hp.sinusoid\n\n\n")
                     self.dec += positional_encoding(self.decoder_inputs,
                                       vocab_size=hp.maxlen, 
                                       num_units=hp.hidden_units, 
@@ -99,6 +106,7 @@ class Graph():
                                       scale=False,
                                       scope="dec_pe")
                 else:
+                    print("\n\n\nPositional encoding now,case NOT hp.sinusoid\n\n\n")
                     self.dec += embedding(tf.tile(tf.expand_dims(tf.range(tf.shape(self.decoder_inputs)[1]), 0), [tf.shape(self.decoder_inputs)[0], 1]),
                                       vocab_size=hp.maxlen, 
                                       num_units=hp.hidden_units, 
@@ -113,7 +121,7 @@ class Graph():
                                             training=tf.convert_to_tensor(is_training))
                 
                 ## Blocks
-                for i in range(hp.num_blocks):
+                for i in range(hp.num_blocks):      # default num of block is 6
                     with tf.variable_scope("num_blocks_{}".format(i)):
                         ## Multihead Attention ( self-attention)
                         self.dec = multihead_attention(queries=self.dec, 
@@ -139,7 +147,8 @@ class Graph():
                         self.dec = feedforward(self.dec, num_units=[4*hp.hidden_units, hp.hidden_units])
                 
             # Final linear projection
-            self.logits = tf.layers.dense(self.dec, len(en2idx))
+        
+            self.logits = tf.layers.dense(self.dec,len(en2idx))
             self.preds = tf.to_int32(tf.arg_max(self.logits, dimension=-1))
             self.istarget = tf.to_float(tf.not_equal(self.y, 0))
             self.acc = tf.reduce_sum(tf.to_float(tf.equal(self.preds, self.y))*self.istarget)/ (tf.reduce_sum(self.istarget))
@@ -169,12 +178,18 @@ if __name__ == '__main__':
     g = Graph("train"); print("Graph loaded")
     
     # Start session
+    # supervisor sv用于监督长时间的训练
     sv = tf.train.Supervisor(graph=g.graph, 
                              logdir=hp.logdir,
                              save_model_secs=0)
+    print("\n\n\nstart session: supervisor train for a long time\n\n\n")
     with sv.managed_session() as sess:
+        print("\n\n\nnum of epochs is "+str(hp.num_epochs)+'\n\n\n')
         for epoch in range(1, hp.num_epochs+1): 
-            if sv.should_stop(): break
+            if sv.should_stop(): 
+                print("\n\n\nsv is to stop now \n\n\n")
+                break
+            print("\n\n\nsv Not stop yet\n\n\n")
             for step in tqdm(range(g.num_batch), total=g.num_batch, ncols=70, leave=False, unit='b'):
                 sess.run(g.train_op)
                 
